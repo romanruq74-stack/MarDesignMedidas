@@ -1,0 +1,46 @@
+name: Build Mar Design APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Descomprimir proyecto Android
+        run: |
+          mkdir -p project
+          unzip -q MarDesignMedidas_AndroidStudio.zip -d project
+
+      - name: Encontrar proyecto Android
+        id: android
+        run: |
+          GRADLEW=$(find project -name gradlew -type f | head -n 1)
+          if [ -z "$GRADLEW" ]; then
+            echo "No se encontró gradlew"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          echo "project_dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar APK
+        working-directory: ${{ steps.android.outputs.project_dir }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Guardar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MarDesignMedidas-APK
+          path: project/**/build/outputs/apk/**/*.apk
